@@ -46,7 +46,7 @@
 (defun tag-literal (keyword)
   (format nil "#~a" (string-downcase (symbol-name keyword))))
 
-(defun decode (in &key debug-p)
+(defun decode (in &key (maps-as :hash-table) (vectors-as :vector) debug-p)
   (let ((in (if (stringp in) (make-string-input-stream in) in))
         stack
 	map-keys
@@ -55,7 +55,7 @@
     (macrolet ((top (prop) `(getf (car stack) ,prop)))
       (labels ((debug (value &optional topic)
 		 (when debug-p (%debug topic value stack map-keys)))
-	       
+               
                (write-top (char)
 		 (write-char char (top :value)))
 
@@ -74,14 +74,19 @@
 		    (new :string (make-string-output-stream)))
 
 		   (#\[
-		    (new :vector (make-array 5 :fill-pointer 0 :adjustable t)))
+		    (new :vector
+			 (case vectors-as
+			   (:vector (make-array 5 :fill-pointer 0 :adjustable t))
+			   (:list nil))))
 
 		   (#\(
 		    (new :list))
 
 		   (#\{
 		    (push nil map-keys)
-                    (new :map (make-hash-table :test #'equal)))
+		    (new :map (case maps-as
+				(:hash-table (make-hash-table :test #'equal))
+				((:plist :alist) nil))))
 
 		   (#\#
 		    (let ((next-char (read-char in)))
@@ -116,21 +121,64 @@
 		       (new :symbol (make-string-output-stream))
 		       (write-top char))))))
 
-               (end (&optional (finalize 'identity))
+	       (pop-value ()
 		 (let* ((item (pop stack))
-			(value (funcall finalize (getf item :value))))
-		   (when (eq (getf item :type) :map)
-		     (pop map-keys))
-                   (case (top :type)
-		     (:map      (if-let (key (car map-keys))
-				  (progn
-				    (setf (gethash key (top :value)) value)
-				    (setf (car map-keys) nil))
-				  (setf (car map-keys) value)))
-		     (:vector   (vector-push-extend value (top :value)))
-		     (:set      (pushnew value (top :value)))
-		     (:list     (push value (top :value)))
+			(value (getf item :value)))
+		   (case (getf item :type)
+
+		     (:list
+		      (reverse value))
+
+		     (:vector
+		      (if (eq vectors-as :list)
+			  (reverse value)
+			  value))
+
+		     (:map
+		      (pop map-keys)
+		      value)
+
+		     ((:number :keyword)
+		      (read-from-string (get-output-stream-string value)))
+
+		     (:symbol
+		      (parse-symbol (get-output-stream-string value)))
+
+		     (:string
+		      (get-output-stream-string value))
+
+		     (:tagged
+		      (get-output-stream-string (getf value :out)))
+
+		     (otherwise value))))
+
+               (end ()
+		 (let ((value (pop-value)))
+		   (case (top :type)
+		     
+		     (:map
+		      (if-let (key (car map-keys))
+			(progn
+			  (case maps-as
+			    (:hash-table (setf (gethash key (top :value))value))
+			    (:plist      (setf (getf (top :value) key) value))
+			    (:alist      (push (cons key value) (top :value))))
+			  (setf (car map-keys) nil))
+			(setf (car map-keys) value)))
+
+		     (:vector
+		      (case vectors-as
+			(:vector (vector-push-extend value (top :value)))
+			(:list   (push value (top :value)))))
+
+		     (:set
+		      (pushnew value (top :value)))
+
+		     (:list
+		      (push value (top :value)))
+
 		     (otherwise (setf result value)))
+
 		   (debug value "end"))))
 
 	(loop for char = (or reuse (read-char in nil))
@@ -139,72 +187,56 @@
 		 (when reuse (setf reuse nil))
 		 (case (top :type)
 
-		   (:vector     (if (char= char #\]) (end) (begin char)))
 		   (:list       (if (char= char #\)) (end) (begin char)))
+		   (:vector     (if (char= char #\]) (end) (begin char)))
 		   ((:map :set) (if (char= char #\}) (end) (begin char)))
+                   (:string     (if (char= char #\") (end) (write-top char)))
 
 		   (:number
-		    (cond
-
-		      ((or (digit-char-p char) (char= char #\.))
-		       (write-top char))
-
-		      ((member char *end-of-symbol*)
-		       (end (compose #'read-from-string #'get-output-stream-string))
-		       (setf reuse char))))
-
-		   (:keyword
 		    (if (member char *end-of-symbol*)
-			(progn
-			  (end (compose #'read-from-string #'get-output-stream-string))
-			  (setf reuse char))
-			(write-top char)))
+			(progn (end) (setf reuse char))
+			(if (or (digit-char-p char) (char= char #\.))
+			    (write-top char)
+			    (syntax-error "number" nil char))))
 
-		   (:symbol
+                   ((:keyword :symbol)
 		    (if (member char *end-of-symbol*)
-			(progn
-			  (end (compose #'parse-symbol #'get-output-stream-string))
-			  (setf reuse char))
-			(write-top char)))
-
-		   (:string
-		    (if (char= char #\")
-			(end #'get-output-stream-string)
+			(progn (end) (setf reuse char))
 			(write-top char)))
 
                    (:tagged
-		    (flet ((out (value) (get-output-stream-string (getf value :out))))
-		      (if-let ((tag (getf (top :value) :tag)))
-			(when (not (member char *whitespace*))
-                          (let ((started-p (getf (top :value) :started-p)))
-			    (if (char= char #\")
-				(if started-p
-				    (end #'(lambda (value) (list :tagged tag (out value))))
-				    (setf (getf (top :value) :started-p) t))
-				(if started-p
-				    (write-char char (getf (top :value) :out))
-                                    (syntax-error (tag-literal tag) nil char)))))
-			(if (member char *tag-follow*)
-			    (progn
-			      (setf (getf (top :value) :tag)
-				    (parse-tag (out (top :value))))
-                              (when (not (member char *whitespace*))
-				(setf reuse char)))
-			    (write-char char (getf (top :value) :out))))))
+                    (if-let ((tag (getf (top :value) :tag)))
+		      (when (not (member char *whitespace*))
+                        (let ((started-p (getf (top :value) :started-p)))
+			  (if (char= char #\")
+			      (if started-p
+				  (end)
+                                  (setf (getf (top :value) :started-p) t))
+			      (if started-p
+				  (write-char char (getf (top :value) :out))
+                                  (syntax-error (tag-literal tag) nil char)))))
+		      (if (member char *tag-follow*)
+			  (progn
+			    (setf (getf (top :value) :tag)
+				  (parse-tag (get-output-stream-string
+					      (getf (top :value) :out))))
+                            (when (not (member char *whitespace*))
+			      (setf reuse char)))
+			  (write-char char (getf (top :value) :out)))))
 
 		   (:comment
 		    (when (char= char #\newline)
 		      (pop stack)))
 
 		   (:discard
-		    (flet ((discard () (pop stack) (setf reuse char)))
-                      (if (top :value)
-			  (when (member char *end-of-symbol*)
-                            (discard))
-			  (if (member char *enclosing*)
-                              (discard)
-			      (when (not (member char *whitespace*))
-				(setf (top :value) t))))))
+		    (when (or (and (top :value)
+				   (member char *end-of-symbol*))
+			      (or (member char *enclosing*)
+				  (when (not (member char *whitespace*))
+				    (setf (top :value) t)
+				    nil)))
+		      (pop stack)
+		      (setf reuse char)))
 
 		   (otherwise (begin char))))
 	result))))
