@@ -6,13 +6,12 @@
 (defparameter *end-of-symbol* (append *ignored* *enclosing*))
 (defparameter *tag-follow* (append *whitespace* '(#\" #\{ #\[ #\()))
 
+(defgeneric read-tagged (tag value))
+
 (define-condition decode-error (error) ())
 
 (define-condition unknown-symbol-error (decode-error)
   ((symbol-name :initarg :symbol-name)))
-
-(define-condition unknown-tag-error (decode-error)
-  ((tag-name :initarg :tag-name)))
 
 (define-condition syntax-error (decode-error)
   ((message :initarg :message)))
@@ -27,7 +26,7 @@
   (format t "~:[~;~:*~a ~]~s ~20t~s~50t~s~%"
 	  topic
 	  value
-	  (mapcar #'(lambda (item) (getf item :type)) stack)
+          (mapcar #'(lambda (item) (getf item :type)) stack)
 	  map-keys))
 
 (defparameter *primitive-symbols* '(("nil" . nil) ("false" . nil) ("true" . t)))
@@ -37,18 +36,11 @@
     (cdr cons)
     (error 'unknown-symbol-error :symbol-name string)))
 
-(defparameter *built-in-tags* '(("inst" . :inst) ("uuid" . :uuid)))
-
-(defun parse-tag (string)
-  (or (cdr (assoc string *built-in-tags* :test 'string=))
-      (error 'unknown-tag-error :tag-name (format nil "#~a" string))))
-
-(defun tag-literal (symbol)
-  (format nil "#~a" (string-downcase (symbol-name symbol))))
-
 (defun decode (in &key (map-as :hash-table)
 		       (vector-as :array)
 		       (list-as :list)
+		       (uuid-as-string-p t)
+		       (inst-as-string-p t)
                        debug-p)
   (let ((in (if (stringp in) (make-string-input-stream in) in))
         stack
@@ -92,7 +84,7 @@
 		    (push nil map-keys)
 		    (new :map (case map-as
 				(:hash-table (make-hash-table :test #'equal))
-				((:plist :alist) nil))))
+				((:plist :alist) (list)))))
 
 		   (#\#
 		    (let ((next-char (read-char in)))
@@ -102,7 +94,7 @@
 			(otherwise
 			 (if (alpha-char-p next-char)
 			     (progn
-			       (new :tagged (list :out (make-string-output-stream)))
+                               (new :tagged (make-string-output-stream))
 			       (setf reuse next-char))
 			     (syntax-error nil char next-char))))))
 
@@ -163,12 +155,16 @@
 		      (get-output-stream-string value))
 
 		     (:tagged
-		      (get-output-stream-string (getf value :out)))
+                      (let ((tag (getf item :tag)))
+			(or (and (eq tag :|uuid|) uuid-as-string-p value)
+			    (and (eq tag :|inst|) inst-as-string-p value)
+			    (read-tagged tag value))))
 
-		     (otherwise value))))
+                     (otherwise value))))
 
                (end ()
 		 (let ((value (pop-value)))
+		   (debug value "end")
 		   (case (top :type)
 		     
 		     (:map
@@ -194,9 +190,11 @@
 		     (:set
 		      (pushnew value (top :value)))
 
-		     (otherwise (setf result value)))
+		     (:tagged
+		      (setf (top :value) value)
+		      (end))
 
-		   (debug value "end"))))
+		     (otherwise (setf result value))))))
 
 	(loop for char = (or reuse (read-char in nil))
 	      while (and char (not result))
@@ -222,26 +220,15 @@
 			(write-top char)))
 
                    (:tagged
-                    (if-let ((tag (getf (top :value) :tag)))
-		      (when (not (member char *whitespace*))
-                        (let ((started-p (getf (top :value) :started-p)))
-			  (if (char= char #\")
-			      (if started-p
-				  (end)
-                                  (setf (getf (top :value) :started-p) t))
-			      (if started-p
-				  (write-char char (getf (top :value) :out))
-                                  (syntax-error (tag-literal tag) nil char)))))
-		      (if (member char *tag-follow*)
-			  (progn
-			    (setf (getf (top :value) :tag)
-				  (parse-tag (get-output-stream-string
-					      (getf (top :value) :out))))
-                            (when (not (member char *whitespace*))
-			      (setf reuse char)))
-			  (write-char char (getf (top :value) :out)))))
+		    (if (top :tag)
+			(begin char)
+			(if (member char *tag-follow*)
+			    (let ((tag (get-output-stream-string (top :value))))
+			      (setf (top :tag) (intern tag "KEYWORD"))
+			      (setf reuse char))
+                            (write-top char))))
 
-		   (:comment
+                   (:comment
 		    (when (char= char #\newline)
 		      (pop stack)))
 
@@ -249,7 +236,7 @@
 		    (when (or (and (top :value)
 				   (member char *end-of-symbol*))
 			      (or (member char *enclosing*)
-				  (when (not (member char *whitespace*))
+				  (unless (member char *whitespace*)
 				    (setf (top :value) t)
 				    nil)))
 		      (pop stack)
