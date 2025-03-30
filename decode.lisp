@@ -46,7 +46,10 @@
 (defun tag-literal (keyword)
   (format nil "#~a" (string-downcase (symbol-name keyword))))
 
-(defun decode (in &key (maps-as :hash-table) (vectors-as :vector) debug-p)
+(defun decode (in &key (map-as :hash-table)
+		       (vector-as :array)
+		       (list-as :list)
+                       debug-p)
   (let ((in (if (stringp in) (make-string-input-stream in) in))
         stack
 	map-keys
@@ -75,16 +78,19 @@
 
 		   (#\[
 		    (new :vector
-			 (case vectors-as
-			   (:vector (make-array 5 :fill-pointer 0 :adjustable t))
-			   (:list nil))))
+			 (case vector-as
+			   (:array (make-array 5 :fill-pointer 0 :adjustable t))
+			   (:list  (list)))))
 
 		   (#\(
-		    (new :list))
+		    (new :list
+			 (case list-as
+			   (:array (make-array 5 :fill-pointer 0 :adjustable t))
+			   (:list  (list)))))
 
 		   (#\{
 		    (push nil map-keys)
-		    (new :map (case maps-as
+		    (new :map (case map-as
 				(:hash-table (make-hash-table :test #'equal))
 				((:plist :alist) nil))))
 
@@ -127,10 +133,12 @@
 		   (case (getf item :type)
 
 		     (:list
-		      (reverse value))
+		      (if (eq list-as :list)
+			  (reverse value)
+			  value))
 
 		     (:vector
-		      (if (eq vectors-as :list)
+		      (if (eq vector-as :list)
 			  (reverse value)
 			  value))
 
@@ -159,23 +167,25 @@
 		     (:map
 		      (if-let (key (car map-keys))
 			(progn
-			  (case maps-as
-			    (:hash-table (setf (gethash key (top :value))value))
+			  (case map-as
+			    (:hash-table (setf (gethash key (top :value)) value))
 			    (:plist      (setf (getf (top :value) key) value))
 			    (:alist      (push (cons key value) (top :value))))
 			  (setf (car map-keys) nil))
 			(setf (car map-keys) value)))
 
 		     (:vector
-		      (case vectors-as
-			(:vector (vector-push-extend value (top :value)))
-			(:list   (push value (top :value)))))
+		      (case vector-as
+			(:array (vector-push-extend value (top :value)))
+			(:list  (push value (top :value)))))
+
+		     (:list
+		      (case list-as
+			(:array (vector-push-extend value (top :value)))
+			(:list  (push value (top :value)))))
 
 		     (:set
 		      (pushnew value (top :value)))
-
-		     (:list
-		      (push value (top :value)))
 
 		     (otherwise (setf result value)))
 
