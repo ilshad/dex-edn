@@ -70,7 +70,8 @@
 		 (case char
 
 		   (#\:
-		    (new :keyword (make-string-output-stream)))
+		    (new :keyword (make-string-output-stream))
+		    (write-top char))
 
 		   (#\"
 		    (new :string (make-string-output-stream)))
@@ -146,11 +147,11 @@
 		      value)
 
 		     (:keyword
-		      (let ((name (get-output-stream-string value)))
-			(read-from-string
-			 (if (position-if #'upper-case-p name)
-                             (concatenate 'string ":|" name "|")
-			     (concatenate 'string ":" name)))))
+		      (read-from-string
+		       (let ((name (get-output-stream-string value)))
+                         (if (position-if #'upper-case-p name)
+                             (concatenate 'string ":|" (subseq name 1) "|")
+			     name))))
 
 		     (:symbol
 		      (parse-symbol (get-output-stream-string value)))
