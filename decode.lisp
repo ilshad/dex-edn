@@ -43,8 +43,8 @@
   (or (cdr (assoc string *built-in-tags* :test 'string=))
       (error 'unknown-tag-error :tag-name (format nil "#~a" string))))
 
-(defun tag-literal (keyword)
-  (format nil "#~a" (string-downcase (symbol-name keyword))))
+(defun tag-literal (symbol)
+  (format nil "#~a" (string-downcase (symbol-name symbol))))
 
 (defun decode (in &key (map-as :hash-table)
 		       (vector-as :array)
@@ -70,8 +70,7 @@
 		 (case char
 
 		   (#\:
-		    (new :keyword (make-string-output-stream))
-		    (write-top char))
+		    (new :keyword (make-string-output-stream)))
 
 		   (#\"
 		    (new :string (make-string-output-stream)))
@@ -146,11 +145,18 @@
 		      (pop map-keys)
 		      value)
 
-		     ((:number :keyword)
-		      (read-from-string (get-output-stream-string value)))
+		     (:keyword
+		      (let ((name (get-output-stream-string value)))
+			(read-from-string
+			 (if (position-if #'upper-case-p name)
+                             (concatenate 'string ":|" name "|")
+			     (concatenate 'string ":" name)))))
 
 		     (:symbol
 		      (parse-symbol (get-output-stream-string value)))
+
+		     (:number
+		      (read-from-string (get-output-stream-string value)))
 
 		     (:string
 		      (get-output-stream-string value))
