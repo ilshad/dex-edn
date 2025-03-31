@@ -108,6 +108,14 @@
 	    do (write-char #\space)))
   (write-char #\}))
 
+(defmethod prn ((x edn-uuid))
+  (princ "#uuid ")
+  (prin1 (value x)))
+
+(defmethod prn ((x edn-inst))
+  (princ "#inst ")
+  (prin1 (value x)))
+
 (defun encode (data &key stream
 		         plist-as-map-p
 		         alist-as-map-p

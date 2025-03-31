@@ -3,10 +3,17 @@
   (:export #:decode
 	   #:encode
 
-	   #:prn
 	   #:read-tagged
+	   #:prn
+
 	   #:edn-set
+	   #:edn-uuid
+	   #:edn-inst
+
 	   #:make-set
+	   #:make-uuid
+	   #:make-inst
+
 	   #:value
 
 	   #:decode-error

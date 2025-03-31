@@ -8,6 +8,12 @@
 
 (defgeneric read-tagged (tag value))
 
+(defmethod read-tagged ((tag (eql :|uuid|)) value)
+  (make-uuid value))
+
+(defmethod read-tagged ((tag (eql :|inst|)) value)
+  (make-inst value))
+
 (define-condition decode-error (error) ())
 
 (define-condition unknown-symbol-error (decode-error)
@@ -30,11 +36,11 @@
     (error 'unknown-symbol-error :symbol-name string)))
 
 (defun decode (in &key (map-as :hash-table)
-		       (vector-as :array)
-		       (list-as :list)
-		       (set-as-list-p t)
-		       (uuid-as-string-p t)
-		       (inst-as-string-p t))
+                       list-as-vector-p
+		       vector-as-list-p
+		       wrap-set-p
+		       wrap-uuid-p
+		       wrap-inst-p)
   (let ((in (if (stringp in) (make-string-input-stream in) in))
         stack
         reuse
@@ -58,15 +64,15 @@
 
 		   (#\[
 		    (new :vector
-			 (case vector-as
-			   (:array (make-array 5 :fill-pointer 0 :adjustable t))
-			   (:list  (list)))))
+			 (if vector-as-list-p
+			     (list)
+			     (make-array 5 :fill-pointer 0 :adjustable t))))
 
 		   (#\(
 		    (new :list
-			 (case list-as
-			   (:array (make-array 5 :fill-pointer 0 :adjustable t))
-			   (:list  (list)))))
+			 (if list-as-vector-p
+			     (make-array 5 :fill-pointer 0 :adjustable t)
+			     (list))))
 
 		   (#\{
                     (new :map (case map-as
@@ -112,12 +118,12 @@
 		   (case (getf item :type)
 
 		     (:list
-		      (if (eq list-as :list)
-			  (reverse value)
-			  value))
+		      (if list-as-vector-p
+			  value
+			  (reverse value)))
 
 		     (:vector
-		      (if (eq vector-as :list)
+		      (if vector-as-list-p
 			  (reverse value)
 			  value))
 
@@ -138,12 +144,12 @@
 		      (get-output-stream-string value))
 
 		     (:set
-		      (if set-as-list-p value (make-set value)))
+		      (if wrap-set-p (make-set value) value))
 
 		     (:tagged
                       (let ((tag (getf item :tag)))
-			(or (and (eq tag :|uuid|) uuid-as-string-p value)
-			    (and (eq tag :|inst|) inst-as-string-p value)
+			(or (and (eq tag :|uuid|) (not wrap-uuid-p) value)
+			    (and (eq tag :|inst|) (not wrap-inst-p) value)
 			    (read-tagged tag value))))
 
                      (otherwise value))))
@@ -163,14 +169,14 @@
 			(setf (top :key) value)))
 
 		     (:vector
-		      (case vector-as
-			(:array (vector-push-extend value (top :value)))
-			(:list  (push value (top :value)))))
+		      (if vector-as-list-p
+			  (push value (top :value))
+			  (vector-push-extend value (top :value))))
 
 		     (:list
-		      (case list-as
-			(:array (vector-push-extend value (top :value)))
-			(:list  (push value (top :value)))))
+		      (if list-as-vector-p
+			  (vector-push-extend value (top :value))
+			  (push value (top :value))))
 
 		     (:set
 		      (pushnew value (top :value)))
