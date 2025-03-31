@@ -32,6 +32,7 @@
 (defun decode (in &key (map-as :hash-table)
 		       (vector-as :array)
 		       (list-as :list)
+		       (set-as-list-p t)
 		       (uuid-as-string-p t)
 		       (inst-as-string-p t))
   (let ((in (if (stringp in) (make-string-input-stream in) in))
@@ -135,6 +136,9 @@
 
 		     (:string
 		      (get-output-stream-string value))
+
+		     (:set
+		      (if set-as-list-p value (make-set value)))
 
 		     (:tagged
                       (let ((tag (getf item :tag)))

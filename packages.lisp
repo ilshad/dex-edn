@@ -5,6 +5,9 @@
 
 	   #:prn
 	   #:read-tagged
+	   #:edn-set
+	   #:make-set
+	   #:value
 
 	   #:decode-error
 	   #:syntax-error

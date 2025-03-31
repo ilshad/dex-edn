@@ -96,6 +96,18 @@
 	       do (write-char #\space)))
      (write-char (if (option :list-as-vector-p) #\] #\))))))
 
+(defmethod prn ((x edn-set))
+  (write-char #\#)
+  (write-char #\{)
+  (let* ((value (value x))
+	 (count (length value)))
+    (loop for i in value
+	  for n from 1
+          do (prn i)
+	  when (< n count)
+	    do (write-char #\space)))
+  (write-char #\}))
+
 (defun encode (data &key stream
 		         plist-as-map-p
 		         alist-as-map-p
