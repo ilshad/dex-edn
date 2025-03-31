@@ -9,4 +9,5 @@
   :serial t
   :depends-on ("alexandria")
   :components ((:file "packages")
-	       (:file "decode")))
+	       (:file "decode")
+	       (:file "encode")))
