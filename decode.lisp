@@ -22,13 +22,6 @@
 			  (or string (char-name char))
 			  (char-name next-char))))
 
-(defun %debug (topic value stack map-keys)
-  (format t "~:[~;~:*~a ~]~s ~20t~s~50t~s~%"
-	  topic
-	  value
-          (mapcar #'(lambda (item) (getf item :type)) stack)
-	  map-keys))
-
 (defparameter *primitive-symbols* '(("nil" . nil) ("false" . nil) ("true" . t)))
 
 (defun parse-symbol (string)
@@ -40,23 +33,17 @@
 		       (vector-as :array)
 		       (list-as :list)
 		       (uuid-as-string-p t)
-		       (inst-as-string-p t)
-                       debug-p)
+		       (inst-as-string-p t))
   (let ((in (if (stringp in) (make-string-input-stream in) in))
         stack
-	map-keys
-	reuse
+        reuse
 	result)
     (macrolet ((top (prop) `(getf (car stack) ,prop)))
-      (labels ((debug (value &optional topic)
-		 (when debug-p (%debug topic value stack map-keys)))
-               
-               (write-top (char)
+      (labels ((write-top (char)
 		 (write-char char (top :value)))
 
 	       (new (type &optional value)
-		 (push (list :type type :value value) stack)
-		 (debug type "new"))
+		 (push (list :type type :value value) stack))
 
 	       (begin (char)
 		 (case char
@@ -81,8 +68,7 @@
 			   (:list  (list)))))
 
 		   (#\{
-		    (push nil map-keys)
-		    (new :map (case map-as
+                    (new :map (case map-as
 				(:hash-table (make-hash-table :test #'equal))
 				((:plist :alist) (list)))))
 
@@ -134,11 +120,7 @@
 			  (reverse value)
 			  value))
 
-		     (:map
-		      (pop map-keys)
-		      value)
-
-		     (:keyword
+                     (:keyword
 		      (read-from-string
 		       (let ((name (get-output-stream-string value)))
                          (if (position-if #'upper-case-p name)
@@ -164,18 +146,17 @@
 
                (end ()
 		 (let ((value (pop-value)))
-		   (debug value "end")
-		   (case (top :type)
+                   (case (top :type)
 		     
 		     (:map
-		      (if-let (key (car map-keys))
+		      (if-let (key (top :key))
 			(progn
 			  (case map-as
 			    (:hash-table (setf (gethash key (top :value)) value))
 			    (:plist      (setf (getf (top :value) key) value))
 			    (:alist      (push (cons key value) (top :value))))
-			  (setf (car map-keys) nil))
-			(setf (car map-keys) value)))
+                          (setf (top :key) nil))
+			(setf (top :key) value)))
 
 		     (:vector
 		      (case vector-as
@@ -198,8 +179,7 @@
 
 	(loop for char = (or reuse (read-char in nil))
 	      while (and char (not result))
-	      do (debug char)
-		 (when reuse (setf reuse nil))
+	      do (when reuse (setf reuse nil))
 		 (case (top :type)
 
 		   (:list       (if (char= char #\)) (end) (begin char)))
