@@ -36,7 +36,7 @@
 			       :wrap-p t)
 		       :alist-as-map-p t))))
 
-(test decode-defaults
+(test decode-map-defaults
   (with-open-file (in (test-file "input-map"))
     (let ((x (decode in)))
       (macrolet ((is-get (predicate expected key)
@@ -44,6 +44,7 @@
 	(is-get = 42 :int)
 	(is-get string= "foo" :string)
         (is-get eq :bar :keyword)
+	(is-get eq :|qualified.CamelCase/_Value| :|qualified.Name/key|)
 	(is-get eq t :true)
         (is (not (gethash :false x)))
 	(is (not (gethash :nil x)))
@@ -53,9 +54,9 @@
 	(is-get equalp '(:foo "bar" 42) :list)
 	(is-get equalp #(:foo "bar" 42) :vector)
 	(let ((m (gethash :map x)))
-	  (is (string= "bar" (gethash :foo m)))
+	  (is (string= "bar" (gethash :_foo m)))
 	  (is (= 42 (gethash :baz m))))
-	(is (zerop (hash-table-count (gethash :empty-map x))))
+        (is (zerop (hash-table-count (gethash :empty-map x))))
 	(is (zerop (length (gethash :empty-vector x))))
 	(let* ((m (gethash :map-of-maps x))
 	       (m1 (gethash "1797afd8-58f8-422e-9a74-a0e0711ecdfa" m))

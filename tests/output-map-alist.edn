@@ -6,7 +6,7 @@
 
  :empty-vector []
  :empty-map nil
- :map {:baz 42 :foo "bar"}
+ :map {:baz 42 :_foo "bar"}
  :vector [:foo "bar" 42]
  :list (:foo "bar" 42)
  :set #{42 "bar" :foo}
@@ -15,6 +15,7 @@
  :nil nil
  :false nil
  :true true
+ :qualified.Name/key :qualified.CamelCase/_Value
  :keyword :bar
  :string "foo"
  :int 42}

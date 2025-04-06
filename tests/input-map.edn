@@ -1,6 +1,7 @@
 {:int 42
  :string "foo"
  :keyword :bar, ;; comment
+ :qualified.Name/key :qualified.CamelCase/_Value
  :true true,
  :false #_"discard" false
  :nil nil
@@ -12,7 +13,7 @@
  :set #{:foo #_ "discard" "bar" 42}
  :list (:foo "bar" 42)
  :vector [:foo, "bar" 42]
- :map {:foo "bar" :baz 42},
+ :map {:_foo "bar" :baz 42},
 
  :empty-map {},
  :empty-vector []
