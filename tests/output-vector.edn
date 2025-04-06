@@ -1,0 +1,15 @@
+[:foo
+ 42
+ "bar"
+ true
+ nil
+ nil
+ #uuid "72be4ac3-923d-4878-95f7-ea2b6808744c"
+ #inst "2025-03-30T20:24:19.264-00:00"
+ #{42 "bar" :foo}
+ (:foo "bar" 42)
+ [:foo "bar" 42]
+ {:foo "bar"}
+ {}
+ []
+ {#uuid "1797afd8-58f8-422e-9a74-a0e0711ecdfa" {:foo :bar}}]

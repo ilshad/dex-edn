@@ -1,0 +1,20 @@
+{:vector-of-maps
+ [{:int 1001 :str "Foo"} {:int 1002 :str "Bar"}]
+
+ :map-of-maps
+ {#uuid "45b4a230-49b7-4b11-bd82-7e2c1f74c3bc" {:int 1002 :str "Bar"} #uuid "1797afd8-58f8-422e-9a74-a0e0711ecdfa" {:int 1001 :str "Foo"}}
+
+ :empty-vector []
+ :empty-map nil
+ :map {:baz 42 :foo "bar"}
+ :vector [:foo "bar" 42]
+ :list (:foo "bar" 42)
+ :set #{42 "bar" :foo}
+ :inst #inst "2025-03-30T20:24:19.264-00:00"
+ :uuid #uuid "72be4ac3-923d-4878-95f7-ea2b6808744c"
+ :nil nil
+ :false nil
+ :true true
+ :keyword :bar
+ :string "foo"
+ :int 42}

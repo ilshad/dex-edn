@@ -1,0 +1,25 @@
+{:int 42
+ :string "foo"
+ :keyword :bar, ;; comment
+ :true true,
+ :false #_"discard" false
+ :nil nil
+
+ ;; comment
+
+ :uuid #uuid "72be4ac3-923d-4878-95f7-ea2b6808744c"
+ :inst #inst "2025-03-30T20:24:19.264-00:00"
+ :set #{:foo #_ "discard" "bar" 42}
+ :list (:foo "bar" 42)
+ :vector [:foo, "bar" 42]
+ :map {:foo "bar" :baz 42},
+
+ :empty-map {},
+ :empty-vector []
+
+ :map-of-maps
+ {#uuid "1797afd8-58f8-422e-9a74-a0e0711ecdfa" {:str "Foo" :int 1001}
+  #uuid "45b4a230-49b7-4b11-bd82-7e2c1f74c3bc" {:str "Bar" :int 1002}}
+
+ :vector-of-maps [{:str "Foo" :int 1001}
+                  {:str "Bar" :int 1002}]}
