@@ -20,26 +20,20 @@
 (test decode-encode-vector
   (is (string= (clean-content (test-content "output-vector"))
 	       (encode (decode (test-content "input-vector")
-			       :wrap-set-p t
-			       :wrap-uuid-p t
-			       :wrap-inst-p t)))))
+			       :wrap-p t)))))
 
 (test decode-encode-map-plist
   (is (string= (clean-content (test-content "output-map-plist"))
 	       (encode (decode (test-content "input-map")
 			       :map-as :plist
-			       :wrap-set-p t
-			       :wrap-uuid-p t
-			       :wrap-inst-p t)
+			       :wrap-p t)
 		       :plist-as-map-p t))))
 
 (test decode-encode-map-alist
   (is (string= (clean-content (test-content "output-map-alist"))
 	       (encode (decode (test-content "input-map")
 			       :map-as :alist
-			       :wrap-set-p t
-			       :wrap-uuid-p t
-			       :wrap-inst-p t)
+			       :wrap-p t)
 		       :alist-as-map-p t))))
 
 (test decode-defaults

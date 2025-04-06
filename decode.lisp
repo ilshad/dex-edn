@@ -38,9 +38,10 @@
 (defun decode (in &key (map-as :hash-table)
                        list-as-vector-p
 		       vector-as-list-p
-		       wrap-set-p
-		       wrap-uuid-p
-		       wrap-inst-p)
+		       wrap-p
+		       (wrap-set-p wrap-p)
+		       (wrap-uuid-p wrap-p)
+		       (wrap-inst-p wrap-p))
   (let ((in (if (stringp in) (make-string-input-stream in) in))
         stack
         reuse
