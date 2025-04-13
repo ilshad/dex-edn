@@ -17,6 +17,32 @@
 (defun clean-content (string)
   (remove-if #'(lambda (char) (member char '(#\Newline #\Tab))) string))
 
+(test decode-simple-vals
+  (is (string= "foo" (decode "\"foo\"")))
+  (is (eq :foo (decode ":foo")))
+  (is (= 42 (decode "42")))
+  (is (= 3.14 (decode "3.14")))
+  (is (eq t (decode "true")))
+  (is (not (decode "false")))
+  (is (not (decode "nil"))))
+
+(test decode-simple-vals-spaces
+  (is (string= "foo" (decode " \"foo\" ")))
+  (is (eq :foo (decode " :foo ")))
+  (is (= 42 (decode " 42 ")))
+  (is (= 3.14 (decode " 3.14 ")))
+  (is (eq t (decode " true ")))
+  (is (not (decode " false ")))
+  (is (not (decode " nil "))))
+
+(test decode-eof-error
+  (signals simple-reader-error (decode "{"))
+  (signals simple-reader-error (decode "["))
+  (signals simple-reader-error (decode "("))
+  (signals simple-reader-error (decode "\""))
+  (signals simple-reader-error (decode "[:foo"))
+  (signals simple-reader-error (decode "[:foo (42")))
+
 (test decode-encode-vector
   (is (string= (clean-content (test-content "output-vector"))
 	       (encode (decode (test-content "input-vector")

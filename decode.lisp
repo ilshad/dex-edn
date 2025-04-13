@@ -186,7 +186,15 @@
 		      (setf (top :value) value)
 		      (end))
 
-		     (otherwise (setf result value))))))
+		     (otherwise (setf result value)))))
+
+	       (unwind-stack ()
+		 (if-let (type (top :type))
+		   (if (member type '(:number :keyword :symbol))
+		       (progn (end)
+			      (unwind-stack))
+		       (simple-reader-error in "EDN: end of file"))
+		   result)))
 
 	(loop for char = (or reuse (read-char in nil))
 	      while (and char (not result))
@@ -234,4 +242,5 @@
 		      (setf reuse char)))
 
 		   (otherwise (begin char))))
-	result))))
+
+	(unwind-stack)))))
