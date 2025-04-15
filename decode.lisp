@@ -95,7 +95,7 @@
 		   (#\;
 		    (new :comment))
 
-		   (#\-
+		   ((#\- #\+)
 		    (let ((next-char (peek-char nil in)))
 		      (if (digit-char-p next-char)
 			  (progn (new :number (make-string-output-stream))
@@ -207,11 +207,37 @@
                    (:string     (if (char= char #\") (end) (write-top char)))
 
 		   (:number
-		    (if (member char *end-of-symbol*)
-			(progn (end) (setf reuse char))
-			(if (or (digit-char-p char) (char= char #\.))
-			    (write-top char)
-			    (syntax-error "number" nil char))))
+		    (cond
+		      ((digit-char-p char)
+		       (write-top char))
+
+		      ((and (char= char #\.)
+			    (not (top :frac))
+			    (not (top :exp)))
+		       (setf (top :frac) t)
+		       (write-top char))
+
+		      ((member char *end-of-symbol*)
+		       (end)
+		       (setf reuse char))
+
+		      ((and (member char '(#\- #\+))
+			    (not (top :exp-sign))
+			    (top :exp))
+		       (setf (top :exp-sign) t)
+		       (write-top char))
+
+		      ((and (char-equal char #\e)
+			    (not (top :exp)))
+		       (setf (top :exp) t)
+                       (write-top char))
+
+		      ((and (char= char #\M)
+			    (not (top :exp))
+			    (not (top :frac)))
+		       (end))
+
+		      (t (syntax-error "number" nil char))))
 
                    ((:keyword :symbol)
 		    (if (member char *end-of-symbol*)

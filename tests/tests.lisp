@@ -35,6 +35,21 @@
   (is (not (decode " false ")))
   (is (not (decode " nil "))))
 
+(test decode-numbers
+  (is (= 0.11 (decode "0.11")))
+  (is (= -0.11 (decode "-0.11")))
+  (is (= 0.11 (decode "+0.11")))
+  (is (= 11 (decode "11M")))
+  (is (= 3e4 (decode "3e4")))
+  (is (= 31400.0
+	 (decode "3.14e4")
+	 (decode "3.14E4")
+	 (decode "3.14e+4")
+	 (decode "3.14E+4")))
+  (is (= 3.14e-4
+	 (decode "3.14e-4")
+	 (decode "3.14E-4"))))
+
 (test decode-eof-error
   (signals simple-reader-error (decode "{"))
   (signals simple-reader-error (decode "["))
