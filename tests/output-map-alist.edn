@@ -12,6 +12,8 @@
  :set #{42 "bar" :foo}
  :inst #inst "2025-03-30T20:24:19.264-00:00"
  :uuid #uuid "72be4ac3-923d-4878-95f7-ea2b6808744c"
+ ns.symbol/_name efgh
+ ns.symbol/Name abcd
  :nil nil
  :false nil
  :true true

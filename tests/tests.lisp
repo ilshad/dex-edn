@@ -89,7 +89,9 @@
 	(is-get eq t :true)
         (is (not (gethash :false x)))
 	(is (not (gethash :nil x)))
-	(is-get string= "72be4ac3-923d-4878-95f7-ea2b6808744c" :uuid)
+	(is-get eq 'abcd '|ns.symbol/Name|)
+	(is-get eq 'efgh 'ns.symbol/_name)
+        (is-get string= "72be4ac3-923d-4878-95f7-ea2b6808744c" :uuid)
 	(is-get string= "2025-03-30T20:24:19.264-00:00" :inst)
 	(is-get equalp '(42 "bar" :foo) :set)
 	(is-get equalp '(:foo "bar" 42) :list)
@@ -112,11 +114,11 @@
 	  (is (= 1001 (gethash :int (elt v 0))))
 	  (is (= 1002 (gethash :int (elt v 1)))))))))
 
-(defmethod read-tagged ((tag (eql :|test.tagged/foo|)) value)
+(defmethod read-tagged ((tag (eql :|test.tagged/Foo|)) value)
   (list :foo (coerce value 'list)))
 
 (test decode-custom-tagged
-  (let ((x (decode "(#test.tagged/foo [1 2 3] 42 #test.tagged/foo [:bar :baz])")))
+  (let ((x (decode "(#test.tagged/Foo [1 2 3] 42 #test.tagged/Foo[:bar :baz])")))
     (is (= 3 (length x)))
     (is (equal '(:foo (1 2 3)) (nth 0 x)))
     (is (equal '(:foo (:bar :baz)) (nth 2 x)))))

@@ -4,6 +4,8 @@
  true,,
  false
  nil
+ ns.symbol/Name
+ abcd
 
  ;; comment
 

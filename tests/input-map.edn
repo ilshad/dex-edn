@@ -5,7 +5,9 @@
  :true true,
  :false #_"discard" false
  :nil nil
-
+ ns.symbol/Name abcd
+ ns.symbol/_name efgh
+ 
  ;; comment
 
  :uuid #uuid "72be4ac3-923d-4878-95f7-ea2b6808744c"

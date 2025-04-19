@@ -17,5 +17,4 @@
 	   #:value
 
 	   #:decode-error
-	   #:syntax-error
-	   #:unknown-symbol-error))
+	   #:syntax-error))

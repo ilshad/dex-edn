@@ -16,9 +16,6 @@
 
 (define-condition decode-error (error) ())
 
-(define-condition unknown-symbol-error (decode-error)
-  ((symbol-name :initarg :symbol-name)))
-
 (define-condition syntax-error (decode-error)
   ((message :initarg :message)))
 
@@ -27,13 +24,6 @@
 	 :message (format nil "~a followed by ~a"
 			  (or string (char-name char))
 			  (char-name next-char))))
-
-(defparameter *primitive-symbols* '(("nil" . nil) ("false" . nil) ("true" . t)))
-
-(defun parse-symbol (string)
-  (if-let (cons (assoc string *primitive-symbols* :test 'string=))
-    (cdr cons)
-    (error 'unknown-symbol-error :symbol-name string)))
 
 (defun decode (in &key (map-as :hash-table)
                        list-as-vector-p
@@ -135,8 +125,15 @@
                              (concatenate 'string ":|" (subseq name 1) "|")
 			     name))))
 
-		     (:symbol
-		      (parse-symbol (get-output-stream-string value)))
+                     (:symbol
+		      (let ((name (get-output-stream-string value)))
+			(cond
+			  ((equal name "true") t)
+			  ((equal name "false") nil)
+			  (t (read-from-string
+			      (if (position-if #'upper-case-p name)
+				  (concatenate 'string "|" name "|")
+				  name))))))
 
 		     (:number
 		      (read-from-string (get-output-stream-string value)))
