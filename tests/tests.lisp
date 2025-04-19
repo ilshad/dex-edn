@@ -111,3 +111,12 @@
 	  (is (string= "Bar" (gethash :str (elt v 1))))
 	  (is (= 1001 (gethash :int (elt v 0))))
 	  (is (= 1002 (gethash :int (elt v 1)))))))))
+
+(defmethod read-tagged ((tag (eql :|test.tagged/foo|)) value)
+  (list :foo (coerce value 'list)))
+
+(test decode-custom-tagged
+  (let ((x (decode "(#test.tagged/foo [1 2 3] 42 #test.tagged/foo [:bar :baz])")))
+    (is (= 3 (length x)))
+    (is (equal '(:foo (1 2 3)) (nth 0 x)))
+    (is (equal '(:foo (:bar :baz)) (nth 2 x)))))
