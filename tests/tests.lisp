@@ -77,6 +77,12 @@
 			       :wrap-p t)
 		       :alist-as-map-p t))))
 
+(test encode-hash-key-string-uuid
+  (is (string= (clean-content (test-content "output-hash-key-string-uuid"))
+	       (encode (gethash :map-of-maps
+				(decode (test-content "input-map")))
+		       :hash-key-string-uuid-p t))))
+
 (test decode-map-defaults
   (with-open-file (in (test-file "input-map"))
     (let ((x (decode in)))

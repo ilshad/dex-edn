@@ -25,12 +25,24 @@
 	(let ((*print-case* :downcase))
 	  (prin1 x)))))
 
+(defun string-uuid-p (string)
+  (and (= (length string) 36)
+       (eq (aref string  8) #\-)
+       (eq (aref string 13) #\-)
+       (eq (aref string 18) #\-)
+       (eq (aref string 23) #\-)))
+
 (defmethod prn ((x hash-table))
   (write-char #\{)
   (let ((count (hash-table-count x)))
     (loop for key being the hash-keys in x using (hash-value val)
 	  for n from 1
-          do (prn key)
+          do (if (and (option :hash-key-string-uuid-p)
+		      (stringp key)
+		      (string-uuid-p key))
+		 (progn (princ "#uuid ")
+			(prin1 key))
+		 (prn key))
 	     (write-char #\space)
 	     (prn val)
 	  when (< n count)
@@ -119,10 +131,12 @@
 (defun encode (data &key stream
 		         plist-as-map-p
 		         alist-as-map-p
-		         list-as-vector-p)
+		         list-as-vector-p
+		         hash-key-string-uuid-p)
   (with-output-to-string (out)
     (let ((*standard-output* (or stream out))
 	  (*options* (list :plist-as-map-p plist-as-map-p
 			   :alist-as-map-p alist-as-map-p
-			   :list-as-vector-p list-as-vector-p)))
+			   :list-as-vector-p list-as-vector-p
+			   :hash-key-string-uuid-p hash-key-string-uuid-p)))
       (prn data))))

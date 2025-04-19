@@ -1,0 +1,2 @@
+{#uuid "1797afd8-58f8-422e-9a74-a0e0711ecdfa" {:str "Foo" :int 1001}
+ #uuid "45b4a230-49b7-4b11-bd82-7e2c1f74c3bc" {:str "Bar" :int 1002}}
